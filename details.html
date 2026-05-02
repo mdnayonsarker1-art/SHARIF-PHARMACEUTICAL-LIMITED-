@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Details Page - Sharif Pharma</title>
+    
+    <meta name="theme-color" content="#1e40af">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body { 
+            background: radial-gradient(circle at top right, #e2e8f0, #f8fafc);
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+
+        #status-indicator {
+            position: fixed; top: 20px; right: 20px;
+            padding: 8px 16px; border-radius: 50px;
+            font-size: 11px; font-weight: 900;
+            text-transform: uppercase; letter-spacing: 1px;
+            z-index: 1000; display: flex;
+            align-items: center; gap: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            transition: all 0.4s ease;
+        }
+
+        .status-online { background: #dcfce7; color: #166534; border: 2px solid #86efac; }
+        .status-offline { background: #fee2e2; color: #991b1b; border: 2px solid #fca5a5; animation: pulse 2s infinite; }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 50px;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.15);
+            border: 1px solid white;
+            width: 95%; max-width: 550px;
+            padding: 40px 30px;
+        }
+
+        .brand-text { font-size: 22px; font-weight: 900; }
+
+        .back-btn {
+            background: #f1f5f9; padding: 10px 20px;
+            border-radius: 15px; font-size: 13px;
+            font-weight: 700; color: #1e40af;
+            transition: 0.3s; display: inline-flex;
+            align-items: center; gap: 8px; margin-bottom: 25px;
+        }
+
+        .group-card {
+            padding: 25px 15px; border-radius: 25px;
+            font-weight: 800; text-align: center;
+            cursor: pointer; transition: all 0.3s;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            border: 2px solid transparent;
+        }
+
+        .bg-custom-1 { background: #f8fafc; border: 2px solid #e2e8f0; color: #334155; }
+        .bg-custom-2 { background: #eff6ff; border: 2px solid #dbeafe; color: #1e40af; }
+
+        .group-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+        .group-card:active { transform: scale(0.95); }
+        .group-card i { font-size: 28px; margin-bottom: 10px; }
+        .group-card span { font-size: 14px; text-transform: uppercase; }
+
+        .icon-blue { color: #3b82f6; }
+        .icon-amber { color: #f59e0b; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div id="status-indicator" class="status-online">
+        <span class="h-2 w-2 rounded-full bg-current"></span>
+        <span id="status-text">Online</span>
+    </div>
+
+    <div class="glass-card animate__animated animate__fadeInUp">
+        
+        <a href="index.html" class="back-btn shadow-sm">
+            <i class="fa-solid fa-arrow-left"></i>
+            <span>Back to Dashboard</span>
+        </a>
+
+        <header class="text-center mb-10">
+            <h1 class="brand-text">
+                <span class="text-red-600 italic">SHARIF</span> 
+                <span class="text-blue-700 ml-1">Pharmaceuticals Ltd.</span>
+            </h1>
+            <p class="text-[10px] text-slate-400 font-bold uppercase tracking-[4px] mt-1">Select Group Entry</p>
+        </header>
+
+        <div id="group-container" class="grid grid-cols-2 gap-6">
+            <p class="col-span-2 text-center text-slate-400 animate-pulse">Loading Groups...</p>
+        </div>
+
+        <div class="mt-12 text-center">
+            <div class="h-[1px] w-12 bg-slate-200 mx-auto mb-4"></div>
+            <p class="text-[9px] text-slate-300 font-bold uppercase tracking-[5px]">
+                Data Entry Panel
+            </p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQyZ3CcmzNxVbq2xwj-P89xohIVODrh1Y",
+            authDomain: "nayon366-f79c6.firebaseapp.com",
+            projectId: "nayon366-f79c6",
+            storageBucket: "nayon366-f79c6.firebasestorage.app",
+            messagingSenderId: "462628331277",
+            appId: "1:462628331277:web:22bf04b3e0221470981a44",
+            measurementId: "G-KRYX309ER8"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // ✅ Firestore Offline Support যোগ করা হয়েছে
+        enableIndexedDbPersistence(db).catch((err) => {
+            console.log("Persistence error:", err.code);
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            const uid = user ? user.uid : "guest_user";
+            
+            onSnapshot(doc(db, "user_settings", uid), (snap) => {
+                const container = document.getElementById('group-container');
+                if (!snap.exists() || !snap.data().groups || snap.data().groups.length === 0) {
+                    container.innerHTML = '<p class="col-span-2 text-center text-red-400">No Groups Found! Add in Settings.</p>';
+                    return;
+                }
+
+                const groups = snap.data().groups;
+                container.innerHTML = ''; 
+
+                groups.forEach((group, index) => {
+                    const styleClass = index % 2 === 0 ? 'bg-custom-1' : 'bg-custom-2';
+                    const iconColor = index % 2 === 0 ? 'icon-blue' : 'icon-amber';
+                    const icons = ['fa-box-archive', 'fa-truck-medical', 'fa-flask-vial', 'fa-microscope'];
+                    const icon = icons[index % icons.length];
+
+                    const button = document.createElement('button');
+                    button.className = `group-card ${styleClass} shadow-sm animate__animated animate__fadeIn`;
+                    button.onclick = () => window.location.href = `entry-form.html?group=${group}`;
+                    button.innerHTML = `
+                        <i class="fa-solid ${icon} ${iconColor}"></i>
+                        <span>${group}</span>
+                    `;
+                    container.appendChild(button);
+                });
+            });
+        });
+
+        function updateOnlineStatus() {
+            const statusDiv = document.getElementById('status-indicator');
+            const statusText = document.getElementById('status-text');
+            if (navigator.onLine) {
+                statusDiv.className = 'status-online';
+                statusText.innerText = 'Online';
+            } else {
+                statusDiv.className = 'status-offline';
+                statusText.innerText = 'Offline Mode';
+            }
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+        updateOnlineStatus();
+
+        // ✅ Service Worker রেজিস্ট্রেশন যোগ করা হয়েছে
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                .then(() => console.log('Details Page SW Registered'));
+            });
+        }
+    </script>
+</body>
+</html>

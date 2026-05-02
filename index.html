@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharif Pharma - Dashboard</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+
+        body { 
+            background-color: #f8fafc;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+            margin: 0; padding-bottom: 120px; 
+            display: flex; flex-direction: column; align-items: center;
+            color: #1e293b;
+        }
+
+        /* --- Top Bar --- */
+        .top-bar {
+            width: 100%; max-width: 400px;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 12px 15px;
+        }
+
+        #home-logo {
+            width: 50px; height: 50px; border-radius: 12px;
+            object-fit: cover; border: 2px solid #fff;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: none;
+        }
+
+        #display-user-name {
+            font-size: 10px; font-weight: 800; color: #94a3b8;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+
+        /* --- Clock Section (Moved Up) --- */
+        .clock {
+            width: 180px; height: 180px; background: #ffffff;
+            border-radius: 50%; 
+            border: 8px solid #000000; 
+            position: relative; 
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+        }
+
+        .marks-container { position: absolute; width: 100%; height: 100%; }
+        .mark { position: absolute; width: 2px; height: 100%; left: 50%; margin-left: -1px; }
+        .mark::before { content: ''; position: absolute; top: 6px; width: 2px; height: 6px; background: #cbd5e1; }
+        .mark.bold::before { width: 3px; height: 9px; background: #94a3b8; }
+
+        .clock .number {
+            position: absolute; width: 100%; height: 100%;
+            text-align: center; font-size: 15px; font-weight: 900;
+            color: #1e293b; padding: 12px; z-index: 2;
+        }
+        
+        #clock-date {
+            position: absolute; bottom: 42px; left: 50%; transform: translateX(-50%);
+            background: #f1f5f9; padding: 2px 8px; border-radius: 6px;
+            font-size: 10px; font-weight: 900; color: #1e293b; border: 1px solid #e2e8f0;
+        }
+
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom; border-radius: 10px; }
+        .hour-hand { width: 6px; height: 45px; background: #1e293b; z-index: 3; margin-left: -3px; }
+        .min-hand { width: 4px; height: 65px; background: #475569; z-index: 2; margin-left: -2px; }
+        .sec-hand { width: 1.5px; height: 75px; background: #ef4444; z-index: 4; margin-left: -0.75px; } 
+        .clock::after { content: ''; position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; transform: translate(-50%, -50%); z-index: 5; }
+
+        /* Colors */
+        .text-red-primary { color: #ef4444; }
+        .text-blue-primary { color: #3b82f6; }
+
+        /* --- Menu Grid --- */
+        .menu-grid {
+            display: grid; grid-template-columns: repeat(2, 1fr);
+            gap: 15px; width: 100%; padding: 0 20px; max-width: 400px;
+        }
+
+        .menu-card { 
+            padding: 20px 10px; border-radius: 24px;
+            text-align: center; background: #ffffff;
+            border: 1px solid rgba(0,0,0,0.02);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .menu-card:active { transform: scale(0.96); }
+        .menu-card i { font-size: 1.6rem; margin-bottom: 8px; display: block; }
+        .menu-card p { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #64748b; }
+
+        .card-blue { border-bottom: 4px solid #3b82f6; } .card-blue i { color: #3b82f6; }
+        .card-green { border-bottom: 4px solid #10b981; } .card-green i { color: #10b981; }
+        .card-red { border-bottom: 4px solid #f43f5e; } .card-red i { color: #f43f5e; }
+        .card-purple { border-bottom: 4px solid #8b5cf6; } .card-purple i { color: #8b5cf6; }
+
+        /* --- Bottom Nav --- */
+        .bottom-nav { 
+            position: fixed; bottom: 20px; width: 90%; max-width: 380px; 
+            background: #1e293b; height: 65px; border-radius: 35px; 
+            display: none; justify-content: space-around; align-items: center; 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2); z-index: 1000;
+        }
+        .nav-item { color: #94a3b8; cursor: pointer; }
+        .nav-item.active { color: #ffffff; }
+
+        .add-entry-fab { 
+            width: 60px; height: 60px; background: #3b82f6; 
+            border-radius: 50%; display: flex; justify-content: center; align-items: center; 
+            color: white; font-size: 24px; position: absolute; top: -30px; left: 50%; 
+            transform: translateX(-50%); border: 6px solid #f8fafc;
+            box-shadow: 0 10px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        /* Clock Numbers Rotation */
+        .number span { display: inline-block; }
+        .n1 { transform: rotate(30deg); } .n1 span { transform: rotate(-30deg); }
+        .n2 { transform: rotate(60deg); } .n2 span { transform: rotate(-60deg); }
+        .n3 { transform: rotate(90deg); } .n3 span { transform: rotate(-90deg); }
+        .n4 { transform: rotate(120deg); } .n4 span { transform: rotate(-120deg); }
+        .n5 { transform: rotate(150deg); } .n5 span { transform: rotate(-150deg); }
+        .n6 { transform: rotate(180deg); } .n6 span { transform: rotate(-180deg); }
+        .n7 { transform: rotate(210deg); } .n7 span { transform: rotate(-210deg); }
+        .n8 { transform: rotate(240deg); } .n8 span { transform: rotate(-240deg); }
+        .n9 { transform: rotate(270deg); } .n9 span { transform: rotate(-270deg); }
+        .n10 { transform: rotate(300deg); } .n10 span { transform: rotate(-300deg); }
+        .n11 { transform: rotate(330deg); } .n11 span { transform: rotate(-330deg); }
+    </style>
+</head>
+<body>
+
+    <div id="dashboard-content" class="w-full max-w-[420px] hidden animate__animated animate__fadeIn">
+        
+        <div class="top-bar">
+            <div class="profile-side">
+                <img id="home-logo" src="" alt="Profile">
+                <p id="display-user-name"></p>
+            </div>
+            <div class="flex gap-2.5">
+                <div onclick="window.location.href='settings.html'" class="w-9 h-9 bg-white rounded-xl flex items-center justify-center text-slate-400 border border-slate-100 shadow-sm cursor-pointer"><i class="fa-solid fa-sliders text-sm"></i></div>
+                <div id="logout-btn" class="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center text-red-400 border border-red-100 shadow-sm cursor-pointer"><i class="fa-solid fa-power-off text-sm"></i></div>
+            </div>
+        </div>
+
+        <header class="text-center mt-2 mb-8 flex flex-col items-center px-4">
+            <div class="clock" id="main-clock">
+                <div id="marks-layer" class="marks-container"></div>
+                <div class="number n12"><span>12</span></div>
+                <div class="number n1"><span>1</span></div><div class="number n2"><span>2</span></div>
+                <div class="number n3"><span>3</span></div><div class="number n4"><span>4</span></div>
+                <div class="number n5"><span>5</span></div><div class="number n6"><span>6</span></div>
+                <div class="number n7"><span>7</span></div><div class="number n8"><span>8</span></div>
+                <div class="number n9"><span>9</span></div><div class="number n10"><span>10</span></div>
+                <div class="number n11"><span>11</span></div>
+                <div id="clock-date">-- --</div>
+                <div class="hand hour-hand" id="hour"></div>
+                <div class="hand min-hand" id="min"></div>
+                <div class="hand sec-hand" id="sec"></div>
+            </div>
+
+            <h1 id="display-biz-name" class="text-xl font-black uppercase tracking-[0.15em] mt-6 leading-tight">
+                <span class="text-red-primary">SHARIF</span> <span class="text-blue-primary">PHARMA</span>
+            </h1>
+        </header>
+
+        <div class="menu-grid">
+            <div onclick="window.location.href='history.html'" class="menu-card card-blue"><i class="fa-solid fa-file-invoice-dollar"></i><p>History</p></div>
+            <div onclick="window.location.href='daily-hisab.html'" class="menu-card card-green"><i class="fa-solid fa-chart-pie"></i><p>Summary</p></div>
+            <div onclick="window.location.href='paid-entry.html'" class="menu-card card-red"><i class="fa-solid fa-wallet"></i><p>Paid Entry</p></div>
+            <div onclick="window.location.href='payment-history.html'" class="menu-card card-purple"><i class="fa-solid fa-list-check"></i><p>Paid List</p></div>
+        </div>
+    </div>
+
+    <nav id="bottom-bar" class="bottom-nav">
+        <div class="nav-item active" onclick="location.reload()"><i class="fa-solid fa-house text-xl"></i></div>
+        <div onclick="window.location.href='details.html'" class="add-entry-fab"><i class="fa-solid fa-plus text-white"></i></div>
+        <div class="nav-item" onclick="window.location.href='settings.html'"><i class="fa-solid fa-gear text-xl"></i></div>
+    </nav>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQyZ3CcmzNxVbq2xwj-P89xohIVODrh1Y",
+            authDomain: "nayon366-f79c6.firebaseapp.com",
+            projectId: "nayon366-f79c6",
+            storageBucket: "nayon366-f79c6.firebasestorage.app",
+            messagingSenderId: "462628331277",
+            appId: "1:462628331277:web:22bf04b3e0221470981a44"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        const marksLayer = document.getElementById('marks-layer');
+        for (let i = 0; i < 60; i++) {
+            const mark = document.createElement('div');
+            mark.className = 'mark';
+            if (i % 5 === 0) mark.classList.add('bold');
+            mark.style.transform = `rotate(${i * 6}deg)`;
+            marksLayer.appendChild(mark);
+        }
+
+        function updateClock() {
+            const now = new Date();
+            const s = now.getSeconds(); const m = now.getMinutes(); const h = now.getHours();
+            const d = now.getDate(); const monthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+            document.getElementById('sec').style.transform = `rotate(${s * 6}deg)`;
+            document.getElementById('min').style.transform = `rotate(${m * 6 + s/10}deg)`;
+            document.getElementById('hour').style.transform = `rotate(${h * 30 + m/2}deg)`;
+            document.getElementById('clock-date').innerText = `${d} ${monthNames[now.getMonth()]}`;
+        }
+        setInterval(updateClock, 1000); updateClock();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById('dashboard-content').style.display = 'block';
+                document.getElementById('bottom-bar').style.display = 'flex';
+                onSnapshot(doc(db, "user_settings", user.uid), (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        if(data.profile?.photo) {
+                            const logo = document.getElementById('home-logo');
+                            logo.src = data.profile.photo; logo.style.display = 'block';
+                        }
+                        if(data.profile?.name) document.getElementById('display-user-name').innerText = data.profile.name;
+                        if(data.profile?.bizName) {
+                            const biz = data.profile.bizName.trim(); 
+                            const split = biz.split(' ');
+                            document.getElementById('display-biz-name').innerHTML = `<span class="text-red-primary">${split[0]}</span> <span class="text-blue-primary">${split.slice(1).join(' ')}</span>`;
+                        }
+                    }
+                });
+            } else { window.location.href = "login.html"; }
+        });
+        document.getElementById('logout-btn').onclick = () => { if(confirm("Logout?")) signOut(auth); };
+    </script>
+</body>
+</html>

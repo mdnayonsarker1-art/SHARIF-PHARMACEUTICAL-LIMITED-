@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Setup - Sharif Pharma</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { background: #f1f5f9; font-family: 'Inter', sans-serif; }
+        .setup-card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        input, select, textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; outline: none; transition: 0.3s; font-size: 14px; }
+        input:focus, textarea:focus { border-color: #2563eb; }
+        .save-btn { width: 100%; padding: 14px; border-radius: 12px; color: white; font-weight: 800; cursor: pointer; text-transform: uppercase; font-size: 12px; transition: 0.3s; }
+        .save-btn:disabled { background: #94a3b8; cursor: not-allowed; }
+        
+        .group-chip { 
+            padding: 8px 16px; border-radius: 50px; background: #e2e8f0; 
+            color: #475569; font-size: 11px; font-weight: 800; 
+            cursor: pointer; transition: 0.3s; border: none;
+        }
+        .group-chip.active { background: #2563eb; color: white; box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3); }
+
+        .profile-container { position: relative; width: 100px; margin: 0 auto 20px; }
+        #profilePreview { width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background: #eee; }
+        .upload-badge { 
+            position: absolute; bottom: 0; right: 0; background: #2563eb; 
+            color: white; width: 30px; height: 30px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px solid white;
+        }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="max-w-md mx-auto">
+        <div class="flex items-center gap-4 mb-6">
+            <button onclick="window.location.href='index.html'" class="text-slate-500"><i class="fa-solid fa-arrow-left text-xl"></i></button>
+            <h1 class="text-lg font-black text-slate-800 uppercase italic">Admin Setup</h1>
+        </div>
+
+        <div class="setup-card text-center">
+            <h3 class="text-[10px] font-black text-blue-600 uppercase mb-4 tracking-widest text-left">Profile Setup</h3>
+            <div class="profile-container">
+                <img id="profilePreview" src="https://cdn-icons-png.flaticon.com/512/149/149071.png">
+                <label for="fileInput" class="upload-badge"><i class="fa-solid fa-camera text-xs"></i></label>
+                <input type="file" id="fileInput" accept="image/*" class="hidden">
+            </div>
+            <input type="text" id="bizName" placeholder="Business Name (Ex: Sharif Pharma)">
+            <input type="text" id="userName" placeholder="আপনার নাম">
+            <input type="tel" id="userPhone" placeholder="ফোন নম্বর">
+            <button id="pBtn" class="save-btn bg-blue-600 shadow-lg shadow-blue-200">Update Profile</button>
+        </div>
+
+        <div class="setup-card">
+            <h3 class="text-[10px] font-black text-indigo-600 uppercase mb-3 tracking-widest">Step 1: Create Group</h3>
+            <div class="flex gap-2">
+                <input type="text" id="gInput" placeholder="Ex: GB-12" class="mb-0">
+                <button id="gBtn" class="bg-indigo-600 text-white px-4 rounded-xl font-bold">ADD</button>
+            </div>
+            <div id="gList" class="mt-4 flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="setup-card">
+            <h3 class="text-[10px] font-black text-emerald-600 uppercase mb-3 tracking-widest">Step 2: Add Customers (Bulk)</h3>
+            <select id="gSelect"><option value="">Select Group First</option></select>
+            
+            <textarea id="cInputBulk" rows="4" placeholder="নামগুলো লিখুন... (যেমন: নাম ১, নাম ২ অথবা প্রতি লাইনে একটি নাম)"></textarea>
+            
+            <p class="text-[9px] text-slate-400 mb-3 italic">* কমা দিয়ে অথবা প্রতি লাইনে নাম লিখে পেস্ট করুন।</p>
+            <button id="cBtnBulk" class="save-btn bg-emerald-600">Save All Customers</button>
+        </div>
+
+        <div class="setup-card">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Manage Customers</h3>
+                <span id="cust-count" class="text-[10px] bg-slate-100 px-2 py-1 rounded font-bold text-slate-600">0 Showing</span>
+            </div>
+            <div id="filter-chips" class="flex flex-wrap gap-2 mb-4 border-b pb-4"></div>
+            <div id="cList" class="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                <p class="text-center text-slate-400 text-xs py-4">গ্রুপ সিলেক্ট করুন</p>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, arrayUnion, arrayRemove, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQyZ3CcmzNxVbq2xwj-P89xohIVODrh1Y",
+            authDomain: "nayon366-f79c6.firebaseapp.com",
+            projectId: "nayon366-f79c6",
+            storageBucket: "nayon366-f79c6.firebasestorage.app",
+            messagingSenderId: "462628331277",
+            appId: "1:462628331277:web:22bf04b3e0221470981a44"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentUserUid = "";
+        let allCustomers = [];
+        let activeFilter = ''; 
+        let base64Image = "";
+
+        onAuthStateChanged(auth, (user) => {
+            if(user){
+                currentUserUid = user.uid;
+                loadData();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // ফটো প্রিভিউ
+        document.getElementById('fileInput').onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 1048576) { alert("১ এমবির নিচের ফাইল দিন!"); return; }
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    base64Image = event.target.result;
+                    document.getElementById('profilePreview').src = base64Image;
+                };
+                reader.readAsDataURL(file);
+            }
+        };
+
+        function loadData() {
+            if(!currentUserUid) return;
+            onSnapshot(doc(db, "user_settings", currentUserUid), (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                
+                if(data.profile) {
+                    const p = data.profile;
+                    document.getElementById('bizName').value = p.bizName || "";
+                    document.getElementById('userName').value = p.name || "";
+                    document.getElementById('userPhone').value = p.phone || "";
+                    if(p.photo) {
+                        document.getElementById('profilePreview').src = p.photo;
+                        base64Image = p.photo;
+                    }
+                }
+
+                const groups = data.groups || [];
+                allCustomers = data.customers || [];
+                const gList = document.getElementById('gList');
+                const gSelect = document.getElementById('gSelect');
+                const filterChips = document.getElementById('filter-chips');
+                
+                gList.innerHTML = "";
+                gSelect.innerHTML = '<option value="">Select Group First</option>';
+                filterChips.innerHTML = ""; 
+
+                groups.forEach(g => {
+                    const chip = document.createElement('div');
+                    chip.className = "group-chip active flex items-center gap-2";
+                    chip.innerHTML = `${g} <i class="fa-solid fa-xmark cursor-pointer ml-1"></i>`;
+                    chip.querySelector('i').onclick = (e) => { e.stopPropagation(); window.deleteGroup(g); };
+                    gList.appendChild(chip);
+
+                    gSelect.innerHTML += `<option value="${g}">${g}</option>`;
+                    
+                    const btn = document.createElement('button');
+                    btn.className = `group-chip ${activeFilter === g ? 'active' : ''}`;
+                    btn.innerText = g;
+                    btn.onclick = () => { activeFilter = g; renderCustomers(); };
+                    filterChips.appendChild(btn);
+                });
+                renderCustomers();
+            });
+        }
+
+        // প্রোফাইল আপডেট
+        document.getElementById('pBtn').onclick = async () => {
+            const biz = document.getElementById('bizName').value.trim();
+            const btn = document.getElementById('pBtn');
+            if(!biz) { alert("ব্যবসার নাম দিন!"); return; }
+
+            btn.innerText = "Updating..."; btn.disabled = true;
+            try {
+                await setDoc(doc(db, "user_settings", currentUserUid), { 
+                    profile: { bizName: biz, name: document.getElementById('userName').value.trim(), 
+                               phone: document.getElementById('userPhone').value.trim(), photo: base64Image } 
+                }, { merge: true });
+                alert("প্রোফাইল আপডেট হয়েছে!");
+            } catch (e) { alert(e.message); }
+            finally { btn.innerText = "Update Profile"; btn.disabled = false; }
+        };
+
+        // গ্রুপ ডিলিট
+        window.deleteGroup = async (g) => { 
+            if(confirm(`গ্রুপ ${g} ডিলিট করবেন?`)) await updateDoc(doc(db, "user_settings", currentUserUid), { groups: arrayRemove(g) }); 
+        };
+
+        // কাস্টমার ডিলিট
+        window.deleteCustomer = async (n, g) => { 
+            if(confirm(`${n}-কে ডিলিট করবেন?`)) await updateDoc(doc(db, "user_settings", currentUserUid), { customers: arrayRemove({group: g, name: n}) }); 
+        };
+
+        // গ্রুপ অ্যাড
+        document.getElementById('gBtn').onclick = async () => { 
+            const v = document.getElementById('gInput').value.trim().toUpperCase(); 
+            if(v) {
+                await setDoc(doc(db, "user_settings", currentUserUid), { groups: arrayUnion(v) }, { merge: true }); 
+                document.getElementById('gInput').value = "";
+            }
+        };
+
+        // ৩. বাল্ক কাস্টমার সেভ ফাংশন (NEW)
+        document.getElementById('cBtnBulk').onclick = async () => {
+            const g = document.getElementById('gSelect').value; 
+            const rawInput = document.getElementById('cInputBulk').value.trim();
+            
+            if(!g || !rawInput) { alert("গ্রুপ এবং নাম উভয়ই প্রয়োজন!"); return; }
+
+            const btn = document.getElementById('cBtnBulk');
+            btn.innerText = "Saving List..."; btn.disabled = true;
+
+            // কমা বা নতুন লাইন দিয়ে নামগুলোকে আলাদা করা
+            const namesArray = rawInput.split(/[,\n]/).map(n => n.trim()).filter(n => n !== "");
+            
+            // অবজেক্ট অ্যারে তৈরি
+            const newCustomers = namesArray.map(name => ({ group: g, name: name }));
+
+            try {
+                // একসাথে অনেকগুলো ডাটা সেভ
+                await setDoc(doc(db, "user_settings", currentUserUid), { 
+                    customers: arrayUnion(...newCustomers) 
+                }, { merge: true });
+                
+                document.getElementById('cInputBulk').value = "";
+                alert(`${namesArray.length} জন কাস্টমার সেভ হয়েছে!`);
+            } catch (e) { alert(e.message); }
+            finally { btn.innerText = "Save All Customers"; btn.disabled = false; }
+        };
+
+        // লিস্ট রেন্ডার
+        window.renderCustomers = function() {
+            const cList = document.getElementById('cList');
+            const chips = document.querySelectorAll('#filter-chips .group-chip');
+            chips.forEach(c => c.innerText === activeFilter ? c.classList.add('active') : c.classList.remove('active'));
+
+            if (!activeFilter) { cList.innerHTML = `<p class="text-center text-slate-400 text-xs py-4">গ্রুপ সিলেক্ট করুন</p>`; return; }
+            
+            const filtered = allCustomers.filter(c => c.group === activeFilter);
+            document.getElementById('cust-count').innerText = filtered.length + " Showing";
+            
+            cList.innerHTML = filtered.length === 0 ? `<p class="text-center text-slate-400 text-xs py-4">এই গ্রুপে কেউ নেই</p>` :
+            filtered.map(c => `
+                <div class="p-3 bg-white border mb-2 rounded-xl flex justify-between items-center shadow-sm">
+                    <span class="text-sm font-bold text-slate-700">${c.name}</span>
+                    <i class="fa-solid fa-trash text-red-400 cursor-pointer p-2 hover:bg-red-50 rounded-full transition" onclick="window.deleteCustomer('${c.name}', '${c.group}')"></i>
+                </div>
+            `).join('');
+        };
+    </script>
+</body>
+</html>

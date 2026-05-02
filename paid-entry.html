@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sharif Pharma - Payout Entry</title>
+    
+    <meta name="theme-color" content="#dc2626">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="logo.png">
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        body {
+            background: radial-gradient(circle at top right, #fca5a5, transparent),
+                        radial-gradient(circle at bottom left, #f1f5f9, transparent), #f8fafc;
+            min-height: 100vh; font-family: 'Inter', sans-serif;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .premium-card {
+            background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(20px);
+            border: 2px solid #ffffff; border-radius: 40px;
+            box-shadow: 0 30px 60px -15px rgba(220, 38, 38, 0.15);
+            width: 95%; max-width: 450px;
+        }
+        .custom-input, .custom-select {
+            background: #ffffff; border: 2px solid #f1f5f9; border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .custom-input:focus, .custom-select:focus {
+            border-color: #ef4444; box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+        }
+        .pay-btn {
+            width: 110px; height: 110px;
+            background: linear-gradient(135deg, #dc2626, #7c3aed);
+            color: white; border-radius: 50%; font-weight: 900;
+            border: 8px solid #ffffff; box-shadow: 0 15px 30px rgba(220, 38, 38, 0.3);
+            cursor: pointer; transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .pay-btn:active { transform: scale(0.9); }
+        .pay-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+        .status-badge { font-size: 10px; font-weight: 900; padding: 5px 12px; border-radius: 20px; text-transform: uppercase; }
+        .online-bg { background: #dcfce7; color: #15803d; }
+        .offline-bg { background: #fee2e2; color: #b91c1c; }
+
+        #pendingModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal-content { background: white; width: 90%; max-width: 400px; border-radius: 30px; padding: 25px; max-height: 80vh; overflow-y: auto; }
+        .pending-item { border-bottom: 1px solid #f1f5f9; padding: 12px 5px; display: flex; align-items: center; gap: 12px; }
+        .item-checkbox { width: 18px; height: 18px; accent-color: #dc2626; cursor: pointer; }
+    </style>
+</head>
+<body class="p-4">
+
+    <div id="toast" class="fixed top-10 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-full font-black shadow-2xl opacity-0 z-[200] transition-all duration-500 text-sm">
+        ✅ ACTION SUCCESS!
+    </div>
+
+    <div class="premium-card p-6 md:p-10 animate__animated animate__fadeInUp">
+        
+        <div class="flex justify-between items-center mb-8">
+            <button onclick="location.href='index.html'" class="bg-white p-2 px-3 rounded-xl font-black text-[10px] border flex items-center gap-1 text-slate-600 shadow-sm">
+                <i class="fa-solid fa-house text-red-500"></i> HOME
+            </button>
+            <div id="net-status" class="status-badge online-bg">Checking...</div>
+        </div>
+
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-black text-slate-800 tracking-tight uppercase">Paid Entry</h1>
+            <p id="user-display" class="h-4"></p> 
+        </div>
+
+        <div class="space-y-5">
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block ml-1">Date</label>
+                <input type="date" id="p-date" class="custom-input w-full p-4 text-slate-700 font-bold outline-none">
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block ml-1">Payout Head (Group)</label>
+                <select id="p-group" class="custom-select w-full p-4 text-slate-700 font-bold outline-none cursor-pointer">
+                    <option value="">Loading Groups...</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="text-[10px] font-black text-slate-400 uppercase mb-1 block ml-1">Amount (TK)</label>
+                <input type="number" id="p-amount" class="custom-input w-full p-5 text-red-600 font-black text-3xl outline-none shadow-sm text-center" placeholder="0">
+            </div>
+        </div>
+
+        <div class="mt-10 flex flex-col items-center gap-6">
+            <button id="payBtn" class="pay-btn" disabled>SAVE</button>
+
+            <button id="viewPendingBtn" class="flex items-center gap-2 text-[11px] font-black text-slate-400 hover:text-red-600 transition-all uppercase tracking-widest">
+                <i class="fa-solid fa-clock-rotate-left"></i>
+                Pending Records 
+                <span id="pendingCountBadge" class="hidden bg-red-600 text-white rounded-full px-2 py-0.5 text-[9px] ml-1">0</span>
+            </button>
+        </div>
+    </div>
+
+    <div id="pendingModal">
+        <div class="modal-content animate__animated animate__zoomIn">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-black text-slate-800 text-lg uppercase">Pending Payouts</h2>
+                <button id="closeModal" class="text-slate-400"><i class="fa-solid fa-circle-xmark text-2xl"></i></button>
+            </div>
+            
+            <div class="flex items-center gap-2 mb-4 bg-red-50 p-3 rounded-xl border border-red-100">
+                <input type="checkbox" id="selectAll" class="item-checkbox">
+                <label for="selectAll" class="text-xs font-black text-red-700 uppercase">Select All</label>
+            </div>
+
+            <div id="pendingListContainer" class="space-y-1 mb-6"></div>
+
+            <button id="postSelectedBtn" class="w-full bg-slate-900 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-black transition-all">
+                POST SELECTED DATA
+            </button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAQyZ3CcmzNxVbq2xwj-P89xohIVODrh1Y",
+            authDomain: "nayon366-f79c6.firebaseapp.com",
+            projectId: "nayon366-f79c6",
+            storageBucket: "nayon366-f79c6.firebasestorage.app",
+            messagingSenderId: "462628331277",
+            appId: "1:462628331277:web:22bf04b3e0221470981a44"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        let currentUserUid = "";
+
+        const getPending = () => JSON.parse(localStorage.getItem('payout_pending')) || [];
+        const savePending = (data) => localStorage.setItem('payout_pending', JSON.stringify(data));
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserUid = user.uid;
+                document.getElementById('payBtn').disabled = false;
+                await fetchGroups();
+                updatePendingUI();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        async function fetchGroups() {
+            const groupSelect = document.getElementById('p-group');
+            try {
+                const docSnap = await getDoc(doc(db, "user_settings", currentUserUid));
+                if (docSnap.exists()) {
+                    const groupsArray = docSnap.data().groups;
+                    if (groupsArray && Array.isArray(groupsArray)) {
+                        groupSelect.innerHTML = groupsArray.map(g => `<option value="${g}">${g}</option>`).join('');
+                    }
+                }
+            } catch (err) { console.error(err); }
+        }
+
+        function updatePendingUI() {
+            const data = getPending();
+            const badge = document.getElementById('pendingCountBadge');
+            badge.innerText = data.length;
+            data.length > 0 ? badge.classList.remove('hidden') : badge.classList.add('hidden');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.opacity = '1';
+            setTimeout(() => t.style.opacity = '0', 3000);
+        }
+
+        document.getElementById('payBtn').onclick = async () => {
+            const rawDate = document.getElementById('p-date').value;
+            const group = document.getElementById('p-group').value;
+            const amount = document.getElementById('p-amount').value;
+
+            if(!amount || amount <= 0 || !rawDate) return alert("❌ সঠিক তারিখ ও অ্যামাউন্ট দিন!");
+
+            const [y, m, d] = rawDate.split('-');
+            const formattedDate = `${parseInt(m)}/${parseInt(d)}/${y}`;
+
+            const dataObj = {
+                uid: currentUserUid,
+                group: group,
+                type: 'paid',
+                name: "PAID ENTRY",
+                amount: parseFloat(amount),
+                date: formattedDate,
+                tempId: Date.now()
+            };
+
+            const btn = document.getElementById('payBtn');
+            btn.disabled = true;
+
+            try {
+                if(navigator.onLine) {
+                    await addDoc(collection(db, "sharif_collection"), { ...dataObj, timestamp: serverTimestamp() });
+                    showToast("🚀 SAVED ONLINE!");
+                } else {
+                    const pending = getPending();
+                    pending.push(dataObj);
+                    savePending(pending);
+                    showToast("💾 SAVED TO PENDING!");
+                    updatePendingUI();
+                }
+                document.getElementById('p-amount').value = "";
+            } catch(e) { alert("Error: " + e.message); }
+            btn.disabled = false;
+        };
+
+        const listContainer = document.getElementById('pendingListContainer');
+        function renderPendingList() {
+            const data = getPending();
+            if(data.length === 0) {
+                document.getElementById('pendingModal').style.display = 'none';
+                return;
+            }
+            listContainer.innerHTML = data.map(item => `
+                <div class="pending-item flex justify-between items-center">
+                    <div class="flex items-center gap-3 flex-1">
+                        <input type="checkbox" class="item-cb" value="${item.tempId}">
+                        <div>
+                            <p class="text-[11px] font-black text-slate-800 uppercase">${item.group}</p>
+                            <p class="text-[10px] font-bold text-red-600">TK ${item.amount} | ${item.date}</p>
+                        </div>
+                    </div>
+                    <button onclick="window.deletePendingItem(${item.tempId})" class="text-red-500 p-2 hover:bg-red-50 rounded-full transition-all">
+                        <i class="fa-solid fa-trash-can"></i>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        window.deletePendingItem = (id) => {
+            if(confirm("Are you sure?")) {
+                const data = getPending();
+                const filtered = data.filter(item => item.tempId !== id);
+                savePending(filtered);
+                updatePendingUI();
+                renderPendingList();
+                showToast("🗑️ DELETED");
+            }
+        };
+
+        document.getElementById('viewPendingBtn').onclick = () => {
+            const data = getPending();
+            if(data.length === 0) return showToast("পেন্ডিং নেই!");
+            renderPendingList();
+            document.getElementById('pendingModal').style.display = 'flex';
+        };
+
+        document.getElementById('closeModal').onclick = () => document.getElementById('pendingModal').style.display = 'none';
+
+        document.getElementById('selectAll').onchange = (e) => {
+            document.querySelectorAll('.item-cb').forEach(cb => cb.checked = e.target.checked);
+        };
+
+        document.getElementById('postSelectedBtn').onclick = async () => {
+            if(!navigator.onLine) return alert("No Internet!");
+            const checked = document.querySelectorAll('.item-cb:checked');
+            if(checked.length === 0) return alert("Select items first!");
+
+            const selectedIds = Array.from(checked).map(cb => parseInt(cb.value));
+            const allPending = getPending();
+            
+            showToast("🔄 POSTING...");
+            for(const id of selectedIds) {
+                const item = allPending.find(p => p.tempId === id);
+                if(item) {
+                    try {
+                        const { tempId, ...fbData } = item;
+                        await addDoc(collection(db, "sharif_collection"), { ...fbData, timestamp: serverTimestamp() });
+                    } catch(err) { console.error(err); }
+                }
+            }
+
+            savePending(allPending.filter(p => !selectedIds.includes(p.tempId)));
+            document.getElementById('pendingModal').style.display = 'none';
+            updatePendingUI();
+            showToast("✅ POSTED SUCCESSFULLY!");
+        };
+
+        function updateOnlineStatus() {
+            const status = document.getElementById('net-status');
+            status.innerText = navigator.onLine ? "Online" : "Offline Mode";
+            status.className = `status-badge ${navigator.onLine ? 'online-bg' : 'offline-bg'}`;
+        }
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        window.onload = () => {
+            document.getElementById('p-date').value = new Date().toISOString().split('T')[0];
+            updateOnlineStatus();
+        };
+    </script>
+</body>
+</html>
