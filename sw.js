@@ -5,6 +5,8 @@ const ASSETS_TO_CACHE = [
     '/details.html',
     '/history.html', // আপনার হিস্টোরি পেজের নাম
     '/logo.png',
+    '/entry-form.html',
+    '/paid-entry.html',
     '/manifest.json',
     // এক্সটার্নাল লাইব্রেরিগুলো ক্যাশ করা হচ্ছে যাতে অফলাইনে ডিজাইন না ভাঙে
     'https://cdn.tailwindcss.com',
