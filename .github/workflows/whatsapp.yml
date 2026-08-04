@@ -1,0 +1,21 @@
+name: Daily WhatsApp PDF Report
+
+on:
+  schedule:
+    - cron: '20 17 * * *' # বাংলাদেশ সময় রাত ১২:৫০ (UTC 17:20)
+  workflow_dispatch:
+
+jobs:
+  run-report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install Dependencies
+        run: npm install
+      - name: Create Firebase Config
+        run: echo '${{ secrets.FIREBASE_JSON }}' > serviceAccountKey.json
+      - name: Run WhatsApp Bot
+        run: node index.js
