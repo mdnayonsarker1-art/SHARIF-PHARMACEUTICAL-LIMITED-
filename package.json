@@ -1,11 +1,14 @@
 {
-  "name": "sharif-pharma-bot",
+  "name": "whatsapp-bot",
   "version": "1.0.0",
+  "description": "WhatsApp Bot using Baileys",
   "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
-    "@whiskeysockets/baileys": "^6.6.0",
-    "firebase-admin": "^11.10.1",
-    "pdfkit": "^0.13.0",
+    "@whiskeysockets/baileys": "^6.7.8",
     "qrcode-terminal": "^0.12.0"
   }
 }
