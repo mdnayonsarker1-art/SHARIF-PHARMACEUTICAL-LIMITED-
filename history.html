@@ -34,7 +34,7 @@
             </button>
         </div>
 
-        <div class="bg-slate-50 p-6 rounded-[30px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 no-print border border-slate-100">
+        <div class="bg-slate-50 p-6 rounded-[30px] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 no-print border border-slate-100">
             <div class="flex flex-col">
                 <label class="text-[9px] font-black text-slate-400 uppercase ml-2 mb-1">From Date</label>
                 <input type="date" id="f-date-start" class="p-3 border border-slate-200 rounded-xl bg-white shadow-sm font-bold text-slate-600 outline-none">
@@ -53,6 +53,28 @@
                 <button onclick="window.loadData()" class="w-full bg-blue-700 hover:bg-blue-800 text-white p-3 rounded-xl font-black uppercase text-xs shadow-xl transition-all">
                     Search Now
                 </button>
+            </div>
+        </div>
+
+        <!-- Group Cycle Summary Box -->
+        <div id="group-cycle-summary" class="hidden mb-8 bg-blue-50 border border-blue-100 p-6 rounded-[30px] no-print">
+            <div class="flex justify-between items-center mb-3">
+                <span id="cycle-group-name" class="font-black text-xs uppercase tracking-wider text-blue-900 bg-blue-200 px-3 py-1 rounded-full">GROUP NAME</span>
+                <span id="cycle-date-info" class="text-[10px] font-bold text-blue-600 uppercase">Cycle: 11th To Search Date</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-center mt-4">
+                <div class="bg-white p-3 rounded-2xl border border-blue-100">
+                    <p class="text-[9px] font-black text-slate-400 uppercase">Total Entry</p>
+                    <h4 id="cycle-coll-val" class="text-xs md:text-sm font-black text-slate-800 mt-1">৳ 0</h4>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border border-blue-100">
+                    <p class="text-[9px] font-black text-slate-400 uppercase">Total Paid</p>
+                    <h4 id="cycle-paid-val" class="text-xs md:text-sm font-black text-emerald-600 mt-1">৳ 0</h4>
+                </div>
+                <div class="bg-white p-3 rounded-2xl border border-blue-100">
+                    <p class="text-[9px] font-black text-slate-400 uppercase">Remaining Due</p>
+                    <h4 id="cycle-due-val" class="text-xs md:text-sm font-black text-red-600 mt-1">৳ 0</h4>
+                </div>
             </div>
         </div>
 
@@ -144,6 +166,30 @@
             } catch (err) { console.error(err); }
         }
 
+        // ১১ তারিখ থেকে সাইকেল ডেট বের করার লজিক
+        function getCycleStartDate(endDateStr) {
+            const endDate = endDateStr ? new Date(endDateStr) : new Date();
+            let startYear = endDate.getFullYear();
+            let startMonth = endDate.getMonth();
+
+            if (endDate.getDate() < 11) {
+                startMonth -= 1;
+                if (startMonth < 0) {
+                    startMonth = 11;
+                    startYear -= 1;
+                }
+            }
+
+            const startDate = new Date(startYear, startMonth, 11);
+            const formatYMD = (d) => {
+                const y = d.getFullYear();
+                const m = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${y}-${m}-${day}`;
+            };
+            return formatYMD(startDate);
+        }
+
         window.loadData = async () => {
             const list = document.getElementById('data-list');
             list.innerHTML = '<tr><td colspan="5" class="p-10 text-center italic border border-black">Searching...</td></tr>';
@@ -157,13 +203,14 @@
 
                 let groupData = {};
 
+                let cycleColl = 0;
+                let cyclePaid = 0;
+                const effectiveEndDate = searchEnd || searchStart || new Date().toISOString().split('T')[0];
+                const cycleStartDate = getCycleStartDate(effectiveEndDate);
+
                 snap.forEach(s => {
                     const d = s.data();
                     if ((d.uid || d.userId) !== currentUserUid) return;
-                    if (d.type !== "collection") return;
-                    
-                    // ✅ ০ টাকার এন্ট্রি ফিল্টার আউট করা হয়েছে
-                    if (Number(d.amount) <= 0) return;
 
                     let dbDateRaw = d.date || "";
                     let normalizedDate = "";
@@ -172,20 +219,56 @@
                         normalizedDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
                     } else { normalizedDate = dbDateRaw; }
 
+                    if (selGrp !== "All" && d.group === selGrp) {
+                        if (normalizedDate >= cycleStartDate && normalizedDate <= effectiveEndDate) {
+                            const amt = Number(d.amount) || 0;
+                            if (d.type === 'paid' || amt < 0) {
+                                cyclePaid += Math.abs(amt);
+                            } else if (d.type === 'collection' || amt > 0) {
+                                cycleColl += amt;
+                            }
+                        }
+                    }
+
+                    if (d.type !== "collection") return;
+                    if (Number(d.amount) <= 0) return;
+
                     let dateMatch = (searchEnd) ? (normalizedDate >= searchStart && normalizedDate <= searchEnd) : (normalizedDate === searchStart);
                     let groupMatch = (selGrp === "All" || d.group === selGrp);
 
                     if(dateMatch && groupMatch) {
                         if (!groupData[d.group]) groupData[d.group] = { items: [], total: 0 };
-                        groupData[d.group].items.push({id: s.id, ...d, displayDate: dbDateRaw});
+                        // sortKey যুক্ত করা হলো সঠিক সিরিয়ালের জন্য
+                        groupData[d.group].items.push({
+                            id: s.id, 
+                            ...d, 
+                            displayDate: dbDateRaw,
+                            sortKey: normalizedDate
+                        });
                         groupData[d.group].total += Number(d.amount);
                         grandTotal += Number(d.amount);
                         count++;
                     }
                 });
 
+                const summaryBox = document.getElementById('group-cycle-summary');
+                if (selGrp !== "All") {
+                    const cycleDue = cycleColl - cyclePaid;
+                    document.getElementById('cycle-group-name').innerText = selGrp;
+                    document.getElementById('cycle-date-info').innerText = `Range: ${cycleStartDate} to ${effectiveEndDate}`;
+                    document.getElementById('cycle-coll-val').innerText = "৳ " + cycleColl.toLocaleString();
+                    document.getElementById('cycle-paid-val').innerText = "৳ " + cyclePaid.toLocaleString();
+                    document.getElementById('cycle-due-val').innerText = "৳ " + cycleDue.toLocaleString();
+                    summaryBox.classList.remove('hidden');
+                } else {
+                    summaryBox.classList.add('hidden');
+                }
+
                 const sortedGroups = Object.keys(groupData).sort();
                 sortedGroups.forEach(group => {
+                    // ✅ তারিখ অনুযায়ী ঊর্ধ্বমুখী (Ascending) সিরিয়াল করার মূল ফিল্টার
+                    groupData[group].items.sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+
                     groupData[group].items.forEach(item => {
                         html += `
                         <tr class="border-b border-black">
